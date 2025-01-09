@@ -8,9 +8,12 @@ Created on Wed Jan  8 10:33:16 2025
 import cv2
 import numpy as np
 import time
+from datetime import datetime
+
+path = "C:\\Users\\csmpeo1\\Documents\\Data\\HeightSensor\\010825\\"
 
 # Open webcam stream (use 0 for default webcam)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Check if the webcam opened successfully
 if not cap.isOpened():
@@ -24,9 +27,10 @@ if fps == 0:
     print("Warning: Unable to determine FPS (may depend on the webcam driver).")
 else:
     print(f"Webcam frame rate: {fps} FPS")
-    
+
+now = path + "center_" + datetime.now().strftime('%Y%m%d_%H%M%S') + ".txt"    
 # Open a log file to write the center positions
-log_file = open("blob_centers_log.txt", "w")
+log_file = open(now, "w")
 log_file.write("Timestamp,X,Y\n")  # Write header
 
 firstFrame = True
@@ -68,7 +72,7 @@ while True:
             print(f"Center of largest blob: ({cx}, {cy})")
             
             # Log the center position with a timestamp
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+            timestamp = datetime.utcnow().strftime('%F %T.%f')[:-3]
             log_file.write(f"{timestamp},{cx},{cy}\n")
 
             # Mark the center on the frame
