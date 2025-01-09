@@ -7,13 +7,12 @@ Created on Wed Jan  8 10:33:16 2025
 
 import cv2
 import numpy as np
-import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 path = "C:\\Users\\csmpeo1\\Documents\\Data\\HeightSensor\\010825\\"
 
 # Open webcam stream (use 0 for default webcam)
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 # Check if the webcam opened successfully
 if not cap.isOpened():
@@ -28,12 +27,20 @@ if fps == 0:
 else:
     print(f"Webcam frame rate: {fps} FPS")
 
-now = path + "center_" + datetime.now().strftime('%Y%m%d_%H%M%S') + ".txt"    
+starttime = datetime.now()
+logfilename = path + "center_" + starttime.strftime('%Y%m%d_%H%M%S') + ".txt"    
 # Open a log file to write the center positions
-log_file = open(now, "w")
+log_file = open(logfilename, "w")
 log_file.write("Timestamp,X,Y\n")  # Write header
 
+#boolean to check if first frame for finding dimensions
 firstFrame = True
+#boolean to check if start center has been found
+startCenterFound = False
+cxs = []
+cys = []
+cx_ave = 0
+cy_ave = 0
 
 # Process each frame from the webcam
 while True:
@@ -48,12 +55,16 @@ while True:
     # Convert to grayscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     
+    #get dimensions of the image from the first frame
     if firstFrame == True:
-        # Get the dimensions of the frame
         height, width, channels = frame.shape
         print(f"Height: {height} pixels")
         print(f"Width: {width} pixels")
         firstFrame = False
+        
+    elapsedtime = datetime.now() - starttime
+    
+
 
     # Threshold the frame
     _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
@@ -76,10 +87,31 @@ while True:
             log_file.write(f"{timestamp},{cx},{cy}\n")
 
             # Mark the center on the frame
-            cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+            cv2.circle(frame, (cx, cy), 5, (255, 0, 0), -1)
 
             # Optionally, draw the largest contour
-            cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
+            #cv2.drawContours(frame, [largest_contour], -1, (0, 255, 0), 2)
+            
+            #check if start center has been found
+            if startCenterFound == False:
+                # if between seconds 20 and 30 add to list to average 
+                if timedelta(seconds=20) < elapsedtime < timedelta(seconds=30):
+                    cxs.append(cx)
+                    cys.append(cy)
+                elif elapsedtime >= timedelta(seconds=30):
+                    #if after 30 seconds, average and flag that it has been done
+                    cx_ave = int(np.mean(cxs))
+                    cy_ave = int(np.mean(cys))
+                    startCenterFound = True
+                else:
+                    #pass for first 20 seconds to allow stabilization
+                    pass
+                    
+            else:
+                #plot the average point
+                cv2.circle(frame, (cx_ave, cy_ave), 5, (0, 255, 0), -1)
+            
+            
 
     # Display the processed frame
     cv2.imshow('Processed Webcam Stream', frame)
