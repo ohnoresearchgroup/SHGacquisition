@@ -16,29 +16,36 @@ class WebCam():
     def __init__(self,cam_num):
         self.cam_num = cam_num
         #self.cap = cv2.VideoCapture(cam_num)
+        
+        self.flowing = False
 
 
 
             
     def start(self, active = None):
-
+        
         self.path = filedialog.askdirectory()
         
-        #if given threshold and pump, flag that active control is on
+        #variable to hold starting position
+        self.start_level = None
+        #boolean to hold if it is actively flowing
+        self.flowing = False
+        #boolean to hold if active control is on
         self.active_control = False 
+        
+        #if given threshold and pump, flag that active control is on
         if active is not None:
             self.active_control = True
             self.threshold = active[0]
             self.pump = active[1]
             
+            
+        #create file    
         self.starttime = datetime.now()
         self.logfilename = os.path.join(self.path, "center_" + self.starttime.strftime('%Y%m%d_%H%M%S') + ".txt") 
         # Open a log file to write the center positions
         self.log_file = open(self.logfilename, "w")
         self.log_file.write("Timestamp,X,Y\n")  # Write header
-        
-        #boolean for running
-        self.run = True
         
         thread = threading.Thread(target=self.loop,daemon=True)
         thread.start()
@@ -48,6 +55,8 @@ class WebCam():
         
 
     def loop(self):
+        #boolean for running loop
+        self.run = True
         
         cap = cv2.VideoCapture(self.cam_num)
         if not cap.isOpened():
@@ -100,8 +109,15 @@ class WebCam():
                     
                     #only calculate and log once reached maximum length
                     if len(self.xbuffer) == self.xbuffer.maxlen:
+
+                        
                         cx_ave = sum(self.xbuffer) / len(self.xbuffer)
                         cy_ave = sum(self.ybuffer) / len(self.ybuffer)
+                        
+                        
+                        #use first average to assign starting level
+                        if self.start_level == None:
+                            self.start_level = cy_ave
 
                         #log the center position with a timestamp
                         timestamp = datetime.utcnow().strftime('%F %T.%f')[:-3]
@@ -110,14 +126,32 @@ class WebCam():
                         # Mark the center on the frame
                         cv2.circle(frame, (int(cx_ave), int(cy_ave)), 2, (255, 0, 0), -1)
                         cv2.circle(frame, (cx, cy), 2, (0, 255, 0), -1)
-        
+                        
+                        #if active control is triggered
+                        if self.active_control == True:
+                            
+                            #if its not currently flowing
+                            if self.flowing == False:
+                                #test to see if the level is less than the threshold level
+                                if cy_ave < self.start_level - self.threshold:
+                                    #start it and flag it
+                                    self.pump.start()
+                                    self.flowing = True
+                            # if it is current flowing
+                            else:
+                                #test to see if the level has returned to the starting level
+                                if cy_ave > self.start_level:
+                                    #stop it and flag it
+                                    self.pump.stop()
+                                    self.flowing = False
+                                
 
             # Display the processed frame
             cv2.imshow('Processed Webcam Stream', frame)
             
             # Press 'q' to quit the OpenCV window
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                break   
             
         cap.release()
         cv2.destroyAllWindows()
