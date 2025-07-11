@@ -8,8 +8,10 @@ Created on Wed Jan  8 10:33:16 2025
 import cv2
 import numpy as np
 from datetime import datetime, timedelta
+from tkinter import filedialog
+import os
 
-path = "C:\\Users\\csmpeo1\\Documents\\Data\\HeightSensor\\010825\\"
+path = filedialog.askdirectory()
 
 # Open webcam stream (use 0 for default webcam)
 cap = cv2.VideoCapture(1)
@@ -28,7 +30,7 @@ else:
     print(f"Webcam frame rate: {fps} FPS")
 
 starttime = datetime.now()
-logfilename = path + "center_" + starttime.strftime('%Y%m%d_%H%M%S') + ".txt"    
+logfilename = os.path.join(path, "center_" + starttime.strftime('%Y%m%d_%H%M%S') + ".txt") 
 # Open a log file to write the center positions
 log_file = open(logfilename, "w")
 log_file.write("Timestamp,X,Y\n")  # Write header
