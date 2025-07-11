@@ -133,17 +133,19 @@ class WebCam():
                             #if its not currently flowing
                             if self.flowing == False:
                                 #test to see if the level is less than the threshold level
-                                if cy_ave < self.start_level - self.threshold:
+                                if cx_ave < self.start_level + self.threshold:
                                     #start it and flag it
                                     self.pump.start()
                                     self.flowing = True
+                                    print('Started Pump.')
                             # if it is current flowing
                             else:
                                 #test to see if the level has returned to the starting level
-                                if cy_ave > self.start_level:
+                                if cx_ave > self.start_level:
                                     #stop it and flag it
                                     self.pump.stop()
                                     self.flowing = False
+                                    print('Stopped Pump.')
                                 
 
             # Display the processed frame

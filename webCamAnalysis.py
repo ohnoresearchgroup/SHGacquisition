@@ -11,10 +11,12 @@ from datetime import datetime, timedelta
 from tkinter import filedialog
 import os
 
+
 path = filedialog.askdirectory()
 
+
 # Open webcam stream (use 0 for default webcam)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # Check if the webcam opened successfully
 if not cap.isOpened():

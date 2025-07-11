@@ -7,7 +7,7 @@ from syringe_pump import SyringePump
 threshold = 5 #num of pixels to start 
 
 syringe_port = 'COM13'
-camera_num = 1
+camera_num = 0
 
 
 
@@ -68,6 +68,9 @@ class HeightSensorApp:
         
     def stop(self):
         self.webcam.stop()
+        
+        if self.pump is not None:
+            self.pump.stop()
         
     def control(self):
         #check to see if pump has been initialized
