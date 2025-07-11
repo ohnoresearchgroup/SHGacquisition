@@ -6,8 +6,7 @@ Created on Wed Jan  8 10:33:16 2025
 """
 
 import cv2
-import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import threading
 from tkinter import filedialog
 import os
@@ -15,25 +14,14 @@ from collections import deque
 
 class WebCam():
     def __init__(self,cam_num):
-        #start video stream from webcam
-        self.cap = cv2.VideoCapture(cam_num)
+        self.cam_num = cam_num
+        #self.cap = cv2.VideoCapture(cam_num)
 
-        # Check if the webcam opened successfully
-        if not self.cap.isOpened():
-            print("Error: Could not access the webcam.")
-            exit()
-            
-        # Get the frame rate of the webcam
-        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        
-        if self.fps == 0:
-            print("Warning: Unable to determine FPS (may depend on the webcam driver).")
-        else:
-            print(f"Webcam frame rate: {self.fps} FPS")
-            
+
 
             
     def start(self, active = None):
+
         self.path = filedialog.askdirectory()
         
         #if given threshold and pump, flag that active control is on
@@ -52,21 +40,36 @@ class WebCam():
         #boolean for running
         self.run = True
         
-        thread = threading.Thread(target=self.loop)
+        thread = threading.Thread(target=self.loop,daemon=True)
         thread.start()
         
     def stop(self):
         self.run = False
         
 
-    def loop(self):           
+    def loop(self):
+        
+        cap = cv2.VideoCapture(self.cam_num)
+        if not cap.isOpened():
+            print("Cannot open camera")
+            return
+            
+        # Get the frame rate of the webcam
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        
+        if fps == 0:
+            print("Warning: Unable to determine FPS (may depend on the webcam driver).")
+        else:
+            print(f"Webcam frame rate: {fps} FPS")
+
+           
         #create buffer to hold 30 datapoints
-        self.xbuffer = deque(maxlen=150)
-        self.ybuffer = deque(maxlen=150)  
+        self.xbuffer = deque(maxlen=30)
+        self.ybuffer = deque(maxlen=30)  
         
         while self.run:
             #get each frame from the webcam
-            ret, frame = self.cap.read()
+            ret, frame = cap.read()
             
             #break the loop if the frame was not read properly
             if not ret:
@@ -93,34 +96,32 @@ class WebCam():
                     
                     #calculate moving averages
                     self.xbuffer.append(cx)
-                    self.ybuffer.append(cx)
+                    self.ybuffer.append(cy)
                     
                     #only calculate and log once reached maximum length
                     if len(self.xbuffer) == self.xbuffer.maxlen:
                         cx_ave = sum(self.xbuffer) / len(self.xbuffer)
                         cy_ave = sum(self.ybuffer) / len(self.ybuffer)
-                        print(cx_ave)
-                        print(cy_ave)
 
                         #log the center position with a timestamp
                         timestamp = datetime.utcnow().strftime('%F %T.%f')[:-3]
                         self.log_file.write(f"{timestamp},{cx},{cy},{cx_ave},{cy_ave}\n")
         
                         # Mark the center on the frame
-                        #cv2.circle(frame, (cx_ave, cy_ave), 2, (255, 0, 0), -1)
-                        #cv2.circle(frame, (cx, cy), 2, (0, 255, 0), -1)
+                        cv2.circle(frame, (int(cx_ave), int(cy_ave)), 2, (255, 0, 0), -1)
+                        cv2.circle(frame, (cx, cy), 2, (0, 255, 0), -1)
         
 
             # Display the processed frame
             cv2.imshow('Processed Webcam Stream', frame)
-
+            
+            # Press 'q' to quit the OpenCV window
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            
+        cap.release()
         cv2.destroyAllWindows()
-        self.log_file.close()
-        
-        
-    def close(self):
-        # Release the webcam and close windows
-        self.cap.release()
+
 
 if __name__ == "__main__":
     a = WebCam(1)
